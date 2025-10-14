@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CJIS Compliance Auditor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            color: #2d3748;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .header-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .main-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            padding: 0 20px;
+        }
+        
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 24px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .sidebar h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        
+        .policy-selector {
+            margin-bottom: 24px;
+        }
+        
+        .policy-selector label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .policy-selector select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .policy-selector select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .analyze-section {
+            text-align: center;
+        }
+        
+        .analyze-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .analyze-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .analyze-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .quick-stats {
+            margin-top: 24px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        
+        .stat-compliant {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .stat-issues {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            margin-top: 4px;
+        }
+        
+        .content-area {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+        }
+        
+        .policy-upload {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 24px;
+        }
+        
+        .upload-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .upload-header h2 {
+            font-size: 1.1rem;
+            color: #1f2937;
+            margin: 0;
+        }
+        
+        .file-info {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+        
+        .upload-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        
+        .upload-zone:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+        
+        .upload-zone.dragover {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        
+        .upload-icon {
+            font-size: 2rem;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+        
+        .upload-text {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .uploaded-file {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .file-details {
+            display: flex;
+            align-items: center;
+        }
+        
+        .file-icon {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            color: #065f46;
+        }
+        
+        .file-size {
+            color: #6b7280;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+        
+        .remove-file {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 4px;
+        }
+        
+        .or-divider {
+            text-align: center;
+            margin: 16px 0;
+            position: relative;
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+        
+        .or-divider:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e5e7eb;
+        }
+        
+        .or-divider span {
+            background: white;
+            padding: 0 12px;
+            position: relative;
+        }
+        
+        .processing-status {
+            display: none;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .processing-status.show {
+            display: block;
+        }
+        
+        .status-step {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+        
+        .step-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+        
+        .step-complete {
+            background: #10b981;
+            color: white;
+        }
+        
+        .step-processing {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .step-pending {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .policy-textarea {
+            width: 100%;
+            height: 200px;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            background: #fafbfc;
+            transition: border-color 0.2s;
+        }
+        
+        .policy-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+        }
+        
+        .results-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        .results-header {
+            background: #f8fafc;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .results-header h2 {
+            font-size: 1.1rem;
+            margin: 0;
+            color: #1f2937;
+        }
+        
+        .results-content {
+            padding: 24px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .compliance-item {
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            transition: all 0.2s;
+        }
+        
+        .compliance-item:hover {
+            transform: translateX(2px);
+        }
+        
+        .compliant {
+            background: #f0fdf4;
+            border-left-color: #10b981;
+        }
+        
+        .non-compliant {
+            background: #fef2f2;
+            border-left-color: #ef4444;
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .requirement-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .badge-compliant {
+            background: #10b981;
+            color: white;
+        }
+        
+        .badge-non-compliant {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .issues-list {
+            margin: 12px 0;
+        }
+        
+        .issues-list h4 {
+            font-size: 0.85rem;
+            color: #7c2d12;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .issues-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .issues-list li {
+            padding: 6px 0;
+            font-size: 0.85rem;
+            color: #991b1b;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .issues-list li:before {
+            content: "•";
+            color: #ef4444;
+            font-weight: bold;
+            width: 1em;
+            margin-right: 8px;
+        }
+        
+        .suggestions-list {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #f3f4f6;
+        }
+        
+        .suggestions-list h4 {
+            font-size: 0.85rem;
+            color: #1f2937;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .suggestions-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .suggestions-list li {
+            padding: 8px 12px;
+            margin: 6px 0;
+            background: #eff6ff;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #1e40af;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>CJIS Compliance Auditor</h1>
+            <div class="header-info">Professional Compliance Analysis Tool</div>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <h2>Policy Analysis</h2>
+            
+            <div class="policy-selector">
+                <label for="policySection">CJIS Section:</label>
+                <select id="policySection">
+                    <option value="authenticator">5.6.3.2 - Authenticator Management</option>
+                    <option value="mediaProtection">5.10 - Media Protection</option>
+                    <option value="accessControl">5.2 - Access Control</option>
+                    <option value="auditLog">5.4 - Audit and Accountability</option>
+                    <option value="physicalSecurity">5.9 - Physical and Environmental Protection</option>
+                </select>
+            </div>
+            
+            <div class="analyze-section">
+                <button class="analyze-btn" onclick="analyzeCompliance()" id="analyzeBtn">
+                    Analyze Compliance
+                </button>
+            </div>
+            
+            <div class="quick-stats" id="quickStats">
+                <div style="font-weight: 600; margin-bottom: 8px;">Analysis Summary</div>
+                <div class="stat-grid">
+                    <div class="stat-item stat-compliant">
+                        <div class="stat-number" id="compliantCount">-</div>
+                        <div class="stat-label">Compliant</div>
+                    </div>
+                    <div class="stat-item stat-issues">
+                        <div class="stat-number" id="issuesCount">-</div>
+                        <div class="stat-label">Issues</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="policy-upload">
+                <div class="upload-header">
+                    <h2>Agency Policy Document</h2>
+                    <div class="file-info">Upload PDF, Word, or paste text directly</div>
+                </div>
+                
+                <div class="upload-zone" onclick="document.getElementById('fileInput').click()" 
+                     ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">
+                        <strong>Click to upload</strong> or drag and drop<br>
+                        PDF, DOC, DOCX files supported
+                    </div>
+                    <input type="file" id="fileInput" class="file-input" accept=".pdf,.doc,.docx,.txt" onchange="handleFileSelect(event)">
+                </div>
+                
+                <div id="uploadedFile" class="uploaded-file" style="display: none;">
+                    <div class="file-details">
+                        <span class="file-icon">📎</span>
+                        <span class="file-name" id="fileName"></span>
+                        <span class="file-size" id="fileSize"></span>
+                    </div>
+                    <button class="remove-file" onclick="removeFile()">&times;</button>
+                </div>
+                
+                <div class="processing-status" id="processingStatus">
+                    <div class="status-step">
+                        <div class="step-icon step-complete" id="extractStep">✓</div>
+                        <span>Extracting text from document...</span>
+                    </div>
+                    <div class="status-step">
+                        <div class="step-icon step-processing" id="analyzeStep">⟳</div>
+                        <span>Analyzing compliance requirements...</span>
+                    </div>
+                    <div class="status-step">
+                        <div class="step-icon step-pending" id="reportStep">○</div>
+                        <span>Generating compliance report...</span>
+                    </div>
+                </div>
+                
+                <div class="or-divider">
+                    <span>OR</span>
+                </div>
+                
+                <textarea 
+                    id="policyText" 
+                    class="policy-textarea" 
+                    placeholder="Paste your agency's policy document here..."
+>METRO POLICE DEPARTMENT - AUTHENTICATOR MANAGEMENT POLICY
+
+Section 4.2: Access Control and Authentication
+
+4.2.1 Password Requirements
+All department personnel must use strong passwords containing at least 8 characters including uppercase, lowercase, numbers and special characters. Passwords must be changed every 90 days.
+
+4.2.2 Initial Credential Setup
+New officers receive temporary login credentials during orientation. All default passwords must be changed upon first system login. IT staff will provide initial setup guidance.
+
+4.2.3 Lost or Compromised Credentials  
+Officers must immediately report lost ID badges to their direct supervisor. Forgotten passwords should be reported to the IT helpdesk through official channels. The IT department will reset passwords within 24 hours.
+
+4.2.4 Multi-Factor Authentication
+All access to criminal justice databases requires multi-factor authentication using both password and biometric verification (fingerprint scanner). Secondary authentication tokens are issued by IT administration.
+
+4.2.5 User Responsibilities
+Personnel are strictly prohibited from sharing login credentials with any other individual. Officers must maintain physical possession of authentication devices. Any suspicious account activity should be reported to the cybersecurity team.</textarea>
+            </div>
+            
+            <div class="results-panel">
+                <div class="results-header">
+                    <h2>Compliance Analysis Results</h2>
+                </div>
+                <div class="results-content" id="results">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>Select a CJIS section and click "Analyze Compliance" to begin assessment</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function analyzeCompliance() {
+    const policyText = document.getElementById('policyText').value;
+    const policySectionSelect = document.getElementById('policySection');
+    const selectedSection = policySectionSelect.options[policySectionSelect.selectedIndex].value;
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    
+    // Convert the CJIS dropdown value to the key used in compliance_checker.py
+    // Example: 'authenticator' becomes 'authenticator_management'
+    const sectionMap = {
+        'authenticator': 'authenticator_management',
+        'mediaProtection': 'media_protection'
+        // Add other mappings here as you expand the checker
+    };
+    const backendSectionKey = sectionMap[selectedSection] || selectedSection;
+
+    if (!policyText.trim()) {
+        alert('Please enter a policy document to analyze.');
+        return;
+    }
+
+    // --- Show loading state ---
+    analyzeBtn.innerHTML = '<span class="loading-spinner"></span>Analyzing...';
+    analyzeBtn.disabled = true;
+    showProcessingStatus(); // This is an existing helper function in the file
+
+    // --- NEW: Prepare data and call the backend API ---
+    const formData = new FormData();
+    formData.append('policy_text', policyText);
+    formData.append('section', backendSectionKey);
+
+    fetch('http://127.0.0.1:8000/api/analyze', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        // The 'data' object is the JSON checklist from your Python backend
+        console.log("Received data from backend:", data); // Good for debugging
+        
+        // We need to adapt the display function to the new data structure
+        displayChecklistResults(data); 
+    })
+    .catch(error => {
+        console.error('Error during analysis:', error);
+        alert('An error occurred. Please check the terminal for more details.');
+    })
+    .finally(() => {
+        // --- Reset the button and hide loading status ---
+        analyzeBtn.innerHTML = 'Analyze Compliance';
+        analyzeBtn.disabled = false;
+        hideProcessingStatus(); // This is another existing helper function
+    }); 
+}
+        
+        
+        function performSystematicCheck(policyText, section) {
+            // Simulate the Python class systematic checking
+            const cjisRequirements = {
+                authenticator: {
+                    "5.6.3.2.1": {
+                        title: "Define Initial Authenticator Content",
+                        requirement: "Agencies shall define initial authenticator content for authenticators defined by the organization.",
+                        critical: true
+                    },
+                    "5.6.3.2.2": {
+                        title: "Administrative Procedures for Distribution/Recovery/Revocation", 
+                        requirement: "Agencies shall establish administrative procedures for initial authenticator distribution, for lost/compromised/damaged authenticators, and for revoking authenticators.",
+                        critical: true
+                    },
+                    "5.6.3.2.3": {
+                        title: "Change Default Authenticators Upon Installation",
+                        requirement: "Agencies shall change default authenticators upon information system installation.",
+                        critical: true
+                    },
+                    "5.6.3.2.4": {
+                        title: "Periodic Authenticator Changes",
+                        requirement: "Agencies shall change/refresh authenticators periodically.",
+                        critical: true
+                    },
+                    "5.6.3.2.5": {
+                        title: "User Safeguarding Responsibilities",
+                        requirement: "Users shall take reasonable measures to safeguard authenticators including maintaining possession, not loaning/sharing, and immediately reporting lost or compromised authenticators.",
+                        critical: true
+                    }
+                }
+            };
+            
+            const requirements = cjisRequirements[section] || {};
+            const results = [];
+            const text = policyText.toLowerCase();
+            
+            // Systematic check against each CJIS requirement
+            Object.entries(requirements).forEach(([id, req]) => {
+                let status = "missing";
+                let evidence = "";
+                let confidence = 0.3;
+                let issues = [];
+                let suggestions = [];
+                
+                // Check each requirement systematically
+                switch(id) {
+                    case "5.6.3.2.1":
+                        // Check for initial authenticator content definition
+                        if (text.includes("temporary") && text.includes("initial") && text.includes("guidance")) {
+                            status = "non_compliant";
+                            evidence = "Policy mentions temporary credentials and initial setup but lacks formal definition.";
+                            confidence = 0.65;
+                            issues.push("Missing formal definition of initial authenticator content standards");
+                            issues.push("No documented criteria for what constitutes proper initial authenticator setup");
+                            suggestions.push("Define specific standards for initial password complexity, token configuration, or biometric enrollment");
+                            suggestions.push("Document formal procedures for creating and validating initial authenticator content");
+                        } else {
+                            issues.push("No clear definition of initial authenticator content");
+                            suggestions.push("Add explicit procedures for defining initial passwords/tokens");
+                        }
+                        break;
+                        
+                    case "5.6.3.2.2":
+                        let hasDistribution = text.includes("receive") || text.includes("issued");
+                        let hasLostProc = text.includes("report") && text.includes("lost");
+                        let hasRevoke = text.includes("disable") || text.includes("revoke");
+                        let hasCompromised = text.includes("compromised");
+                        
+                        // The sample policy has a critical gap - no revocation procedures
+                        if (hasDistribution && hasLostProc && !hasRevoke) {
+                            status = "non_compliant";
+                            evidence = "Policy covers credential distribution and lost reporting but lacks revocation procedures.";
+                            confidence = 0.70;
+                            issues.push("Missing formal procedures for revoking compromised authenticators");
+                            issues.push("No timeline specified for disabling compromised accounts");
+                            issues.push("Administrative procedures not comprehensive enough");
+                            suggestions.push("Add explicit procedures for immediately revoking compromised credentials");
+                            suggestions.push("Define maximum time limits for credential revocation (e.g., within 2 hours)");
+                            suggestions.push("Document who has authority to revoke credentials and under what circumstances");
+                        } else if (hasDistribution || hasLostProc) {
+                            status = "non_compliant"; 
+                            evidence = "Policy partially addresses administrative procedures.";
+                            confidence = 0.65;
+                            if (!hasDistribution) issues.push("Missing initial distribution procedures");
+                            if (!hasLostProc) issues.push("Missing lost/compromised credential procedures");
+                            if (!hasRevoke) issues.push("Missing credential revocation procedures");
+                        } else {
+                            issues.push("No administrative procedures found for credential lifecycle");
+                            suggestions.push("Document formal procedures for credential distribution, recovery, and revocation");
+                        }
+                        break;
+                        
+                    case "5.6.3.2.3":
+                        if (text.includes("default") && text.includes("change") && (text.includes("first") || text.includes("initial"))) {
+                            status = "compliant";
+                            evidence = "Policy requires changing default passwords upon first system login.";
+                            confidence = 0.88;
+                        } else {
+                            issues.push("Default authenticator change requirement not found");
+                            suggestions.push("Explicitly require changing default passwords/credentials upon system installation");
+                        }
+                        break;
+                        
+                    case "5.6.3.2.4":
+                        if ((text.includes("90 days") || text.includes("periodic")) && text.includes("change")) {
+                            status = "compliant"; 
+                            evidence = "Policy specifies periodic password changes every 90 days.";
+                            confidence = 0.92;
+                        } else {
+                            issues.push("No periodic authenticator refresh requirement");
+                            suggestions.push("Define specific timeframes for regular password/credential changes");
+                        }
+                        break;
+                        
+                    case "5.6.3.2.5":
+                        let hasNoSharing = text.includes("prohibited") && text.includes("shar");
+                        let hasReporting = text.includes("report") && (text.includes("suspicious") || text.includes("compromised"));
+                        let hasPossession = text.includes("maintain") && text.includes("possession");
+                        let hasImmediateReporting = text.includes("immediately") && text.includes("report");
+                        
+                        // Critical gap: sample policy says "should be reported" not "immediately report lost/compromised"
+                        if (hasNoSharing && hasPossession && hasReporting && !hasImmediateReporting) {
+                            status = "non_compliant";
+                            evidence = "Policy covers credential protection and reporting but lacks immediate reporting requirement for lost/compromised items.";
+                            confidence = 0.75;
+                            issues.push("Missing requirement for IMMEDIATE reporting of lost or compromised authenticators");
+                            issues.push("Policy uses 'should report' instead of mandatory 'must immediately report'");
+                            issues.push("No clear distinction between suspicious activity vs lost/compromised credential reporting");
+                            suggestions.push("Change 'should report' to 'must immediately report lost or compromised authenticators'");
+                            suggestions.push("Specify exact timeframe for reporting (e.g., within 1 hour of discovery)");
+                            suggestions.push("Add separate procedures for reporting lost credentials vs suspicious activity");
+                        } else if (hasNoSharing || hasReporting) {
+                            status = "non_compliant";
+                            evidence = "Policy partially addresses user safeguarding responsibilities.";
+                            confidence = 0.60;
+                            if (!hasNoSharing) issues.push("Missing prohibition on sharing credentials");
+                            if (!hasReporting) issues.push("Missing requirement to report lost/compromised items");
+                            if (!hasPossession) issues.push("Missing requirement to maintain physical possession");
+                        } else {
+                            issues.push("User safeguarding responsibilities not adequately addressed");
+                            suggestions.push("Add user responsibilities: maintain possession, don't share, immediately report issues");
+                        }
+                        break;
+                }
+                
+                results.push({
+                    id: id,
+                    requirement: req,
+                    status: status,
+                    evidence: evidence,
+                    confidence: confidence,
+                    issues: issues,
+                    suggestions: suggestions,
+                    auditorConfirmed: false
+                });
+            });
+            
+            return {
+                summary: {
+                    total: results.length,
+                    compliant: results.filter(r => r.status === 'compliant').length,
+                    nonCompliant: results.filter(r => r.status === 'non_compliant').length,
+                    missing: results.filter(r => r.status === 'missing').length,
+                    pendingReview: results.filter(r => !r.auditorConfirmed).length
+                },
+                checks: results
+            };
+        }
+        
+        function displayChecklistResults(checklistData) {
+    const resultsDiv = document.getElementById('results');
+    
+    // --- 1. Update the quick stats in the sidebar ---
+    // Note: Python uses snake_case (non_compliant), so we match that here.
+    document.getElementById('compliantCount').textContent = checklistData.summary.compliant;
+    document.getElementById('issuesCount').textContent = checklistData.summary.non_compliant + checklistData.summary.missing;
+    
+    // --- 2. Build the main results HTML string ---
+    let html = `
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+            <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Analysis Complete</h3>
+            <p style="margin: 0; font-size: 0.9rem; color: #374151;">
+                Found <strong>${checklistData.summary.compliant} compliant</strong> items and 
+                <strong>${checklistData.summary.non_compliant + checklistData.summary.missing} potential issues</strong> that require review.
+            </p>
+        </div>
+    `;
+
+    // --- 3. Loop through each compliance check and create a result card ---
+    // We'll display all items that require confirmation by an auditor.
+    if (checklistData.requires_confirmation && checklistData.requires_confirmation.length > 0) {
+        checklistData.requires_confirmation.forEach(check => {
+            const isCompliant = check.status === 'compliant';
+            
+            html += `
+                <div class="compliance-item ${isCompliant ? 'compliant' : 'non-compliant'}">
+                    <div class="status-header">
+                        <h3 class="requirement-title">${check.requirement.title}</h3>
+                        <span class="status-badge ${isCompliant ? 'badge-compliant' : 'badge-non-compliant'}">
+                            ${isCompliant ? 'COMPLIANT' : 'NON-COMPLIANT'}
+                        </span>
+                    </div>
+            `;
+
+            // If there are issues, list them
+            if (check.issues && check.issues.length > 0) {
+                html += `
+                    <div class="issues-list">
+                        <h4>Identified Issues:</h4>
+                        <ul>
+                            ${check.issues.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            // If there are suggestions, list them
+            if (check.suggestions && check.suggestions.length > 0) {
+                 html += `
+                    <div class="suggestions-list">
+                        <h4>Suggestions:</h4>
+                        <ul>
+                            ${check.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            html += `</div>`; // Close compliance-item
+        });
+    } else {
+        html += `
+            <div class="empty-state">
+                <div class="empty-state-icon">✅</div>
+                <p>No items were returned for review.</p>
+            </div>
+        `;
+    }
+
+    // --- 4. Render the complete HTML to the page ---
+    resultsDiv.innerHTML = html;
+}
