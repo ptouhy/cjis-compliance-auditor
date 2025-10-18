@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Dict, Optional
 from enum import Enum
-import openai  # For LLM integration when ready
+#import openai  # For LLM integration when ready
 
 class ComplianceStatus(Enum):
     COMPLIANT = "compliant"

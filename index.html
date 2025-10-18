@@ -657,305 +657,185 @@ Personnel are strictly prohibited from sharing login credentials with any other 
     </div>
 
     <script>
+        // --- Main analysis function (connects to Python) ---
         function analyzeCompliance() {
-    const policyText = document.getElementById('policyText').value;
-    const policySectionSelect = document.getElementById('policySection');
-    const selectedSection = policySectionSelect.options[policySectionSelect.selectedIndex].value;
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    
-    // Convert the CJIS dropdown value to the key used in compliance_checker.py
-    // Example: 'authenticator' becomes 'authenticator_management'
-    const sectionMap = {
-        'authenticator': 'authenticator_management',
-        'mediaProtection': 'media_protection'
-        // Add other mappings here as you expand the checker
-    };
-    const backendSectionKey = sectionMap[selectedSection] || selectedSection;
-
-    if (!policyText.trim()) {
-        alert('Please enter a policy document to analyze.');
-        return;
-    }
-
-    // --- Show loading state ---
-    analyzeBtn.innerHTML = '<span class="loading-spinner"></span>Analyzing...';
-    analyzeBtn.disabled = true;
-    showProcessingStatus(); // This is an existing helper function in the file
-
-    // --- NEW: Prepare data and call the backend API ---
-    const formData = new FormData();
-    formData.append('policy_text', policyText);
-    formData.append('section', backendSectionKey);
-
-    fetch('http://127.0.0.1:8000/api/analyze', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        // The 'data' object is the JSON checklist from your Python backend
-        console.log("Received data from backend:", data); // Good for debugging
-        
-        // We need to adapt the display function to the new data structure
-        displayChecklistResults(data); 
-    })
-    .catch(error => {
-        console.error('Error during analysis:', error);
-        alert('An error occurred. Please check the terminal for more details.');
-    })
-    .finally(() => {
-        // --- Reset the button and hide loading status ---
-        analyzeBtn.innerHTML = 'Analyze Compliance';
-        analyzeBtn.disabled = false;
-        hideProcessingStatus(); // This is another existing helper function
-    }); 
-}
-        
-        
-        function performSystematicCheck(policyText, section) {
-            // Simulate the Python class systematic checking
-            const cjisRequirements = {
-                authenticator: {
-                    "5.6.3.2.1": {
-                        title: "Define Initial Authenticator Content",
-                        requirement: "Agencies shall define initial authenticator content for authenticators defined by the organization.",
-                        critical: true
-                    },
-                    "5.6.3.2.2": {
-                        title: "Administrative Procedures for Distribution/Recovery/Revocation", 
-                        requirement: "Agencies shall establish administrative procedures for initial authenticator distribution, for lost/compromised/damaged authenticators, and for revoking authenticators.",
-                        critical: true
-                    },
-                    "5.6.3.2.3": {
-                        title: "Change Default Authenticators Upon Installation",
-                        requirement: "Agencies shall change default authenticators upon information system installation.",
-                        critical: true
-                    },
-                    "5.6.3.2.4": {
-                        title: "Periodic Authenticator Changes",
-                        requirement: "Agencies shall change/refresh authenticators periodically.",
-                        critical: true
-                    },
-                    "5.6.3.2.5": {
-                        title: "User Safeguarding Responsibilities",
-                        requirement: "Users shall take reasonable measures to safeguard authenticators including maintaining possession, not loaning/sharing, and immediately reporting lost or compromised authenticators.",
-                        critical: true
-                    }
-                }
+            const policyText = document.getElementById('policyText').value;
+            const policySectionSelect = document.getElementById('policySection');
+            const selectedSection = policySectionSelect.options[policySectionSelect.selectedIndex].value;
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            // Convert the CJIS dropdown value to the key used in compliance_checker.py
+            const sectionMap = {
+                'authenticator': 'authenticator_management',
+                'mediaProtection': 'media_protection'
+                // Add other mappings here as you expand the checker
             };
-            
-            const requirements = cjisRequirements[section] || {};
-            const results = [];
-            const text = policyText.toLowerCase();
-            
-            // Systematic check against each CJIS requirement
-            Object.entries(requirements).forEach(([id, req]) => {
-                let status = "missing";
-                let evidence = "";
-                let confidence = 0.3;
-                let issues = [];
-                let suggestions = [];
-                
-                // Check each requirement systematically
-                switch(id) {
-                    case "5.6.3.2.1":
-                        // Check for initial authenticator content definition
-                        if (text.includes("temporary") && text.includes("initial") && text.includes("guidance")) {
-                            status = "non_compliant";
-                            evidence = "Policy mentions temporary credentials and initial setup but lacks formal definition.";
-                            confidence = 0.65;
-                            issues.push("Missing formal definition of initial authenticator content standards");
-                            issues.push("No documented criteria for what constitutes proper initial authenticator setup");
-                            suggestions.push("Define specific standards for initial password complexity, token configuration, or biometric enrollment");
-                            suggestions.push("Document formal procedures for creating and validating initial authenticator content");
-                        } else {
-                            issues.push("No clear definition of initial authenticator content");
-                            suggestions.push("Add explicit procedures for defining initial passwords/tokens");
-                        }
-                        break;
-                        
-                    case "5.6.3.2.2":
-                        let hasDistribution = text.includes("receive") || text.includes("issued");
-                        let hasLostProc = text.includes("report") && text.includes("lost");
-                        let hasRevoke = text.includes("disable") || text.includes("revoke");
-                        let hasCompromised = text.includes("compromised");
-                        
-                        // The sample policy has a critical gap - no revocation procedures
-                        if (hasDistribution && hasLostProc && !hasRevoke) {
-                            status = "non_compliant";
-                            evidence = "Policy covers credential distribution and lost reporting but lacks revocation procedures.";
-                            confidence = 0.70;
-                            issues.push("Missing formal procedures for revoking compromised authenticators");
-                            issues.push("No timeline specified for disabling compromised accounts");
-                            issues.push("Administrative procedures not comprehensive enough");
-                            suggestions.push("Add explicit procedures for immediately revoking compromised credentials");
-                            suggestions.push("Define maximum time limits for credential revocation (e.g., within 2 hours)");
-                            suggestions.push("Document who has authority to revoke credentials and under what circumstances");
-                        } else if (hasDistribution || hasLostProc) {
-                            status = "non_compliant"; 
-                            evidence = "Policy partially addresses administrative procedures.";
-                            confidence = 0.65;
-                            if (!hasDistribution) issues.push("Missing initial distribution procedures");
-                            if (!hasLostProc) issues.push("Missing lost/compromised credential procedures");
-                            if (!hasRevoke) issues.push("Missing credential revocation procedures");
-                        } else {
-                            issues.push("No administrative procedures found for credential lifecycle");
-                            suggestions.push("Document formal procedures for credential distribution, recovery, and revocation");
-                        }
-                        break;
-                        
-                    case "5.6.3.2.3":
-                        if (text.includes("default") && text.includes("change") && (text.includes("first") || text.includes("initial"))) {
-                            status = "compliant";
-                            evidence = "Policy requires changing default passwords upon first system login.";
-                            confidence = 0.88;
-                        } else {
-                            issues.push("Default authenticator change requirement not found");
-                            suggestions.push("Explicitly require changing default passwords/credentials upon system installation");
-                        }
-                        break;
-                        
-                    case "5.6.3.2.4":
-                        if ((text.includes("90 days") || text.includes("periodic")) && text.includes("change")) {
-                            status = "compliant"; 
-                            evidence = "Policy specifies periodic password changes every 90 days.";
-                            confidence = 0.92;
-                        } else {
-                            issues.push("No periodic authenticator refresh requirement");
-                            suggestions.push("Define specific timeframes for regular password/credential changes");
-                        }
-                        break;
-                        
-                    case "5.6.3.2.5":
-                        let hasNoSharing = text.includes("prohibited") && text.includes("shar");
-                        let hasReporting = text.includes("report") && (text.includes("suspicious") || text.includes("compromised"));
-                        let hasPossession = text.includes("maintain") && text.includes("possession");
-                        let hasImmediateReporting = text.includes("immediately") && text.includes("report");
-                        
-                        // Critical gap: sample policy says "should be reported" not "immediately report lost/compromised"
-                        if (hasNoSharing && hasPossession && hasReporting && !hasImmediateReporting) {
-                            status = "non_compliant";
-                            evidence = "Policy covers credential protection and reporting but lacks immediate reporting requirement for lost/compromised items.";
-                            confidence = 0.75;
-                            issues.push("Missing requirement for IMMEDIATE reporting of lost or compromised authenticators");
-                            issues.push("Policy uses 'should report' instead of mandatory 'must immediately report'");
-                            issues.push("No clear distinction between suspicious activity vs lost/compromised credential reporting");
-                            suggestions.push("Change 'should report' to 'must immediately report lost or compromised authenticators'");
-                            suggestions.push("Specify exact timeframe for reporting (e.g., within 1 hour of discovery)");
-                            suggestions.push("Add separate procedures for reporting lost credentials vs suspicious activity");
-                        } else if (hasNoSharing || hasReporting) {
-                            status = "non_compliant";
-                            evidence = "Policy partially addresses user safeguarding responsibilities.";
-                            confidence = 0.60;
-                            if (!hasNoSharing) issues.push("Missing prohibition on sharing credentials");
-                            if (!hasReporting) issues.push("Missing requirement to report lost/compromised items");
-                            if (!hasPossession) issues.push("Missing requirement to maintain physical possession");
-                        } else {
-                            issues.push("User safeguarding responsibilities not adequately addressed");
-                            suggestions.push("Add user responsibilities: maintain possession, don't share, immediately report issues");
-                        }
-                        break;
+            const backendSectionKey = sectionMap[selectedSection] || selectedSection;
+
+            if (!policyText.trim()) {
+                alert('Please enter a policy document to analyze.');
+                return;
+            }
+
+            // --- Show loading state ---
+            analyzeBtn.innerHTML = '<span class="loading-spinner"></span>Analyzing...';
+            analyzeBtn.disabled = true;
+            showProcessingStatus(); // Calls the helper function below
+
+            // --- Prepare data and call the backend API ---
+            const formData = new FormData();
+            formData.append('policy_text', policyText);
+            formData.append('section', backendSectionKey);
+
+            fetch('http://127.0.0.1:8000/api/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                return response.json();
+            })
+            .then(data => {
+                // The 'data' object is the JSON checklist from your Python backend
+                console.log("Received data from backend:", data); // Good for debugging
                 
-                results.push({
-                    id: id,
-                    requirement: req,
-                    status: status,
-                    evidence: evidence,
-                    confidence: confidence,
-                    issues: issues,
-                    suggestions: suggestions,
-                    auditorConfirmed: false
-                });
-            });
-            
-            return {
-                summary: {
-                    total: results.length,
-                    compliant: results.filter(r => r.status === 'compliant').length,
-                    nonCompliant: results.filter(r => r.status === 'non_compliant').length,
-                    missing: results.filter(r => r.status === 'missing').length,
-                    pendingReview: results.filter(r => !r.auditorConfirmed).length
-                },
-                checks: results
-            };
+                // Display the results
+                displayChecklistResults(data); 
+            })
+            .catch(error => {
+                console.error('Error during analysis:', error);
+                alert('An error occurred. Please check the terminal for more details.');
+            })
+            .finally(() => {
+                // --- Reset the button and hide loading status ---
+                analyzeBtn.innerHTML = 'Analyze Compliance';
+                analyzeBtn.disabled = false;
+                hideProcessingStatus(); // Calls the helper function below
+            }); 
         }
         
+        // --- Displays the results from the Python backend ---
         function displayChecklistResults(checklistData) {
-    const resultsDiv = document.getElementById('results');
-    
-    // --- 1. Update the quick stats in the sidebar ---
-    // Note: Python uses snake_case (non_compliant), so we match that here.
-    document.getElementById('compliantCount').textContent = checklistData.summary.compliant;
-    document.getElementById('issuesCount').textContent = checklistData.summary.non_compliant + checklistData.summary.missing;
-    
-    // --- 2. Build the main results HTML string ---
-    let html = `
-        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-            <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Analysis Complete</h3>
-            <p style="margin: 0; font-size: 0.9rem; color: #374151;">
-                Found <strong>${checklistData.summary.compliant} compliant</strong> items and 
-                <strong>${checklistData.summary.non_compliant + checklistData.summary.missing} potential issues</strong> that require review.
-            </p>
-        </div>
-    `;
-
-    // --- 3. Loop through each compliance check and create a result card ---
-    // We'll display all items that require confirmation by an auditor.
-    if (checklistData.requires_confirmation && checklistData.requires_confirmation.length > 0) {
-        checklistData.requires_confirmation.forEach(check => {
-            const isCompliant = check.status === 'compliant';
+            const resultsDiv = document.getElementById('results');
             
-            html += `
-                <div class="compliance-item ${isCompliant ? 'compliant' : 'non-compliant'}">
-                    <div class="status-header">
-                        <h3 class="requirement-title">${check.requirement.title}</h3>
-                        <span class="status-badge ${isCompliant ? 'badge-compliant' : 'badge-non-compliant'}">
-                            ${isCompliant ? 'COMPLIANT' : 'NON-COMPLIANT'}
-                        </span>
-                    </div>
+            // --- 1. Update the quick stats in the sidebar ---
+            document.getElementById('compliantCount').textContent = checklistData.summary.compliant;
+            document.getElementById('issuesCount').textContent = checklistData.summary.non_compliant + checklistData.summary.missing;
+            
+            // --- 2. Build the main results HTML string ---
+            let html = `
+                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+                    <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Analysis Complete</h3>
+                    <p style="margin: 0; font-size: 0.9rem; color: #374151;">
+                        Found <strong>${checklistData.summary.compliant} compliant</strong> items and 
+                        <strong>${checklistData.summary.non_compliant + checklistData.summary.missing} potential issues</strong> that require review.
+                    </p>
+                </div>
             `;
 
-            // If there are issues, list them
-            if (check.issues && check.issues.length > 0) {
+            // --- 3. Loop through each compliance check and create a result card ---
+            if (checklistData.requires_confirmation && checklistData.requires_confirmation.length > 0) {
+                checklistData.requires_confirmation.forEach(check => {
+                    const isCompliant = check.status === 'compliant';
+                    
+                    html += `
+                        <div class="compliance-item ${isCompliant ? 'compliant' : 'non-compliant'}">
+                            <div class="status-header">
+                                <h3 class="requirement-title">${check.requirement.title}</h3>
+                                <span class="status-badge ${isCompliant ? 'badge-compliant' : 'badge-non-compliant'}">
+                                    ${isCompliant ? 'COMPLIANT' : 'NON-COMPLIANT'}
+                                </span>
+                            </div>
+                    `;
+
+                    // If there are issues, list them
+                    if (check.issues && check.issues.length > 0) {
+                        html += `
+                            <div class="issues-list">
+                                <h4>Identified Issues:</h4>
+                                <ul>
+                                    ${check.issues.map(issue => `<li>${issue}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+                    
+                    // If there are suggestions, list them
+                    if (check.suggestions && check.suggestions.length > 0) {
+                        html += `
+                            <div class="suggestions-list">
+                                <h4>Suggestions:</h4>
+                                <ul>
+                                    ${check.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+
+                    html += `</div>`; // Close compliance-item
+                });
+            } else {
                 html += `
-                    <div class="issues-list">
-                        <h4>Identified Issues:</h4>
-                        <ul>
-                            ${check.issues.map(issue => `<li>${issue}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-            }
-            
-            // If there are suggestions, list them
-            if (check.suggestions && check.suggestions.length > 0) {
-                 html += `
-                    <div class="suggestions-list">
-                        <h4>Suggestions:</h4>
-                        <ul>
-                            ${check.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-            }
-
-            html += `</div>`; // Close compliance-item
-        });
-    } else {
-        html += `
-            <div class="empty-state">
-                <div class="empty-state-icon">✅</div>
-                <p>No items were returned for review.</p>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <p>No items were returned for review.</p>
             </div>
-        `;
-    }
+                `;
+            }
 
-    // --- 4. Render the complete HTML to the page ---
-    resultsDiv.innerHTML = html;
-}
+            // --- 4. Render the complete HTML to the page ---
+            resultsDiv.innerHTML = html;
+        }
+
+        // --- HELPER FUNCTIONS (These were missing) ---
+        function showProcessingStatus() {
+            document.getElementById('processingStatus').classList.add('show');
+        }
+
+        function hideProcessingStatus() {
+            document.getElementById('processingStatus').classList.remove('show');
+        }
+
+        // --- File upload helper functions (Also missing) ---
+        function handleDragOver(event) {
+            event.preventDefault();
+            document.querySelector('.upload-zone').classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            document.querySelector('.upload-zone').classList.remove('dragover');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            document.querySelector('.upload-zone').classList.remove('dragover');
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                displayFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                displayFile(files[0]);
+            }
+        }
+
+        function displayFile(file) {
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+            document.getElementById('uploadedFile').style.display = 'flex';
+        }
+
+        function removeFile() {
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadedFile').style.display = 'none';
+        }
+
+    </script>
+</body>
+</html>
