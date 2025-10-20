@@ -4,7 +4,6 @@ import io    # Used for handling file streams in memory
 from fastapi import FastAPI, UploadFile, File, Form # FastAPI framework components
 from fastapi.middleware.cors import CORSMiddleware  # Middleware for handling Cross-Origin Resource Sharing
 from fastapi.responses import HTMLResponse          # Used to send HTML files back to the browser
-# Removed duplicate fastapi.staticfiles import as it wasn't used
 import PyPDF2 # Library to read .pdf files
 
 # Import the compliance checking logic from the other file
@@ -50,7 +49,7 @@ async def analyze_policy(
     text = ""
     if file: # If a file was uploaded
         content = await file.read() # Read the raw byte content of the file
-        
+
         # Check file extension and extract text accordingly
         if file.filename.endswith('.pdf'):
             try:
@@ -60,7 +59,7 @@ async def analyze_policy(
             except Exception as e:
                 print(f"PDF Error: {e}") # Log error
                 return {"error": f"Error reading PDF file: {str(e)}"}
-        
+
         elif file.filename.endswith('.docx'):
             try:
                 doc_stream = io.BytesIO(content) # Treat bytes as a file
@@ -71,20 +70,19 @@ async def analyze_policy(
                 print(f"DOCX Error: {e}") # Log error
                 return {"error": f"Error reading .docx file: {str(e)}"}
 
-        elif file.filename.endswith('.txt'): # Handle plain text files
+        # --- NEW: Explicitly handle .txt files ---
+        elif file.filename.endswith('.txt'):
              try:
+                 # Decode assuming standard UTF-8 text encoding
                  text = content.decode('utf-8')
              except UnicodeDecodeError:
                  print(f"TXT Decode Error for file: {file.filename}") # Log error
                  return {"error": "Could not read .txt file. Ensure it is UTF-8 encoded."}
-        else:
-             # Fallback attempt for other file types (treat as text)
-             try:
-                 print(f"Warning: Received unsupported file type: {file.filename}. Attempting to decode as text.")
-                 text = content.decode('utf-8')
-             except UnicodeDecodeError:
-                 print(f"Decode Error for unsupported file: {file.filename}") # Log error
-                 return {"error": "Uploaded file is not a supported format (.pdf, .docx, .txt)."}
+        # --- End of new .txt handling ---
+
+        else: # If the file is not pdf, docx, or txt, return an error
+             print(f"Unsupported file type received: {file.filename}") # Log error
+             return {"error": "Uploaded file is not a supported format. Please use .pdf, .docx, or .txt."}
 
     elif policy_text: # If no file, use the text from the textarea
         text = policy_text
@@ -95,7 +93,7 @@ async def analyze_policy(
     # Validate that text was successfully extracted
     if not text or not text.strip():
         return {"error": "The provided document is empty or text could not be extracted."}
-    
+
     # --- 2. Perform Compliance Analysis ---
     try:
         # Create an instance of the compliance checker "brain"
@@ -106,7 +104,7 @@ async def analyze_policy(
         audit_checklist = checker.generate_audit_checklist(compliance_results)
         # Return the successful analysis results
         return audit_checklist
-    
+
     except ValueError as e: # Catch 'Unknown CJIS section' errors from the checker
         print(f"ValueError during analysis: {e}") # Log error
         return {"error": str(e)}
@@ -118,7 +116,7 @@ async def analyze_policy(
 # This block runs only if the script is executed directly (e.g., `python main.py`)
 if __name__ == "__main__":
     import uvicorn # Import uvicorn here so it's only needed for direct execution
-    
+
     print("Starting Uvicorn server locally for development...")
     # Run the FastAPI app using Uvicorn server
     # 'reload=True' automatically restarts the server when code changes are saved
