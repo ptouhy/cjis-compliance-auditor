@@ -1,28 +1,40 @@
 # CJIS Compliance Auditor 🛡️
 
-A full-stack web application that automatically analyzes an agency's security policies against official FBI CJIS standards. Users can paste text or upload a document to generate an instant compliance report that identifies gaps and suggests improvements.
+**Live Demo:** [https://cjis-compliance-auditor.onrender.com](https://cjis-compliance-auditor.onrender.com)
+
+**GitHub Repository:** [https://github.com/ptouhy/cjis-compliance-auditor.git](https://github.com/ptouhy/cjis-compliance-auditor.git)
+
+---
+
+A full-stack web application that automatically analyzes an agency's security policies against official FBI CJIS standards. Users can paste text or upload a document (PDF, DOCX, TXT) to generate an instant compliance report that identifies gaps and suggests improvements.
+
+---
+
+![Screenshot of CJIS Auditor](screenshot.png)
 
 ---
 
 ## Features
 
-* **Text & File Analysis:** Accepts policy input via direct text paste or file upload (PDF and Microsoft Word `.docx` supported).
-* **Compliance Reporting:** Systematically checks the policy against all 5 major CJIS sections.
-* **Dynamic Results:** Generates a real-time report showing `Compliant`, `Non-Compliant`, and `Missing` items.
+* **Text & File Analysis:** Accepts policy input via direct text paste or file upload (PDF, Microsoft Word `.docx`, and plain text `.txt` supported).
+* **Compliance Reporting:** Systematically checks the policy against 5 major CJIS sections using keyword analysis.
+* **Dynamic Results:** Generates a real-time report showing `Compliant`, `Non-Compliant`, and `Missing` items directly in the browser.
 
 ---
 
 ## Technology Stack
 
 * **Backend:** Python
-    * **FastAPI:** For building the web server and API.
+    * **FastAPI:** For building the web server and REST API.
     * **Uvicorn:** As the ASGI server to run the application.
     * **PyPDF2:** To extract text from PDF documents.
     * **python-docx:** To extract text from `.docx` Word documents.
 * **Frontend:**
     * **HTML5:** For page structure.
     * **CSS3:** For all custom styling.
-    * **Vanilla JavaScript:** To handle user interactions and API calls (`fetch`).
+    * **Vanilla JavaScript:** To handle user interactions and asynchronous API calls (`fetch`).
+* **Deployment:**
+    * **Render:** Cloud platform for hosting the live web service.
 
 ---
 
@@ -30,7 +42,7 @@ A full-stack web application that automatically analyzes an agency's security po
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/cjis-compliance-auditor.git](https://github.com/your-username/cjis-compliance-auditor.git)
+    git clone [https://github.com/ptouhy/cjis-compliance-auditor.git](https://github.com/ptouhy/cjis-compliance-auditor.git)
     cd cjis-compliance-auditor
     ```
    
@@ -40,7 +52,7 @@ A full-stack web application that automatically analyzes an agency's security po
     python3 -m venv venv
     source venv/bin/activate
     ```
-   
+    *(Use `.\venv\Scripts\activate` on Windows)*
 
 3.  **Install the required packages:**
     ```bash
