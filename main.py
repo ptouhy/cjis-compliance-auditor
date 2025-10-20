@@ -5,6 +5,9 @@ from fastapi.staticfiles import StaticFiles
 import PyPDF2
 import io
 
+# --- NEW: Import the "brain" ---
+from compliance_checker import CJISComplianceChecker, ComplianceStatus
+
 app = FastAPI(title="CJIS Compliance Auditor")
 
 # Enable CORS
@@ -24,9 +27,10 @@ async def root():
 async def analyze_policy(
     file: UploadFile = File(None),
     policy_text: str = Form(None),
-    section: str = Form("authenticator")
+    section: str = Form("authenticator_management") # Changed default
 ):
-    # Extract text
+    # --- 1. Extract text (This logic is the same) ---
+    text = ""
     if file:
         content = await file.read()
         if file.filename.endswith('.pdf'):
@@ -34,23 +38,40 @@ async def analyze_policy(
             text = ''.join([page.extract_text() for page in pdf_reader.pages])
         else:
             text = content.decode('utf-8')
-    else:
+    elif policy_text:
         text = policy_text
+    else:
+        # Handle error if no text is provided
+        return {"error": "No policy text or file provided."}
+
+    if not text.strip():
+        # Handle error for empty or unreadable file
+        return {"error": "The provided document is empty or could not be read."}
     
-    # Run compliance check (simplified for now)
-    results = {
-        "summary": {
-            "total": 5,
-            "compliant": 2,
-            "nonCompliant": 3,
-            "missing": 0,
-            "pendingReview": 5
-        },
-        "checks": []
-    }
+    # --- 2. Run the REAL compliance check (This replaces the placeholder) ---
+    try:
+        # Create an instance of the "brain"
+        checker = CJISComplianceChecker()
+        
+        # Run the analysis using the extracted text and section
+        compliance_results = checker.check_section(section, text)
+        
+        # Format the results into a clean checklist for the frontend
+        audit_checklist = checker.generate_audit_checklist(compliance_results)
+        
+        # Send the REAL results back
+        return audit_checklist
     
-    return results
+    except ValueError as e:
+        # This catches if the section name is invalid
+        return {"error": str(e)}
+    except Exception as e:
+        # This catches any other unexpected errors
+        return {"error": f"An unexpected error occurred: {str(e)}"}
+
 
 if __name__ == "__main__":
     import uvicorn
+    # Note: The 'reload=True' here is for development.
+    # We can also run this from the terminal.
     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)

@@ -667,9 +667,13 @@ Personnel are strictly prohibited from sharing login credentials with any other 
             // Convert the CJIS dropdown value to the key used in compliance_checker.py
             const sectionMap = {
                 'authenticator': 'authenticator_management',
-                'mediaProtection': 'media_protection'
+                'mediaProtection': 'media_protection',
+                'accessControl': 'access_control',
+                'auditLog': 'audit_and_accountability',
+                'physicalSecurity': 'physical_protection'
                 // Add other mappings here as you expand the checker
             };
+
             const backendSectionKey = sectionMap[selectedSection] || selectedSection;
 
             if (!policyText.trim()) {
