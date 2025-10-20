@@ -702,7 +702,7 @@ Personnel are strictly prohibited from sharing login credentials with any other 
             formData.append('policy_text', policyText);
         }
 
-        fetch('http://127.0.0.1:8000/api/analyze', {
+        fetch('https://cjis-compliance-auditor.onrender.com', {
             method: 'POST',
             body: formData
         })
