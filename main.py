@@ -1,3 +1,5 @@
+import docx  # Add this line
+import io
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -27,47 +29,63 @@ async def root():
 async def analyze_policy(
     file: UploadFile = File(None),
     policy_text: str = Form(None),
-    section: str = Form("authenticator_management") # Changed default
+    section: str = Form("authenticator_management")
 ):
-    # --- 1. Extract text (This logic is the same) ---
+    # --- 1. Extract text ---
     text = ""
     if file:
-        content = await file.read()
+        content = await file.read() # Read file content as bytes
+        
         if file.filename.endswith('.pdf'):
-            pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
-            text = ''.join([page.extract_text() for page in pdf_reader.pages])
+            try:
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+                text = ''.join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
+            except Exception as e:
+                return {"error": f"Error reading PDF file: {str(e)}"}
+        
+        # --- NEW: LOGIC TO HANDLE .DOCX FILES ---
+        elif file.filename.endswith('.docx'):
+            try:
+                # Use io.BytesIO to read the byte content as a file
+                doc_stream = io.BytesIO(content)
+                # Open the document
+                doc = docx.Document(doc_stream)
+                # Extract text from all paragraphs
+                text = '\n'.join([para.text for para in doc.paragraphs if para.text])
+            except Exception as e:
+                # Catch potential errors from python-docx
+                return {"error": f"Error reading .docx file: {str(e)}"}
+        # ----------------------------------------
+
         else:
-            text = content.decode('utf-8')
+            # Fallback for plain text files (.txt) or others
+            try:
+                text = content.decode('utf-8')
+            except UnicodeDecodeError:
+                return {"error": "Uploaded file is not a supported format. Please use .pdf, .docx, or paste text."}
+
     elif policy_text:
         text = policy_text
     else:
-        # Handle error if no text is provided
+        # Handle error if no text and no file provided
         return {"error": "No policy text or file provided."}
 
-    if not text.strip():
-        # Handle error for empty or unreadable file
-        return {"error": "The provided document is empty or could not be read."}
+    # Handle cases where text extraction failed or resulted in empty string
+    if not text or not text.strip():
+        return {"error": "The provided document is empty or text could not be extracted."}
     
-    # --- 2. Run the REAL compliance check (This replaces the placeholder) ---
+    # --- 2. Run the REAL compliance check (This part is unchanged) ---
     try:
-        # Create an instance of the "brain"
-        checker = CJISComplianceChecker()
-        
-        # Run the analysis using the extracted text and section
-        compliance_results = checker.check_section(section, text)
-        
-        # Format the results into a clean checklist for the frontend
-        audit_checklist = checker.generate_audit_checklist(compliance_results)
-        
-        # Send the REAL results back
+        checker = CJISComplianceChecker() #
+        compliance_results = checker.check_section(section, text) #
+        audit_checklist = checker.generate_audit_checklist(compliance_results) #
         return audit_checklist
     
-    except ValueError as e:
-        # This catches if the section name is invalid
+    except ValueError as e: # Catch unknown section error from checker
         return {"error": str(e)}
-    except Exception as e:
-        # This catches any other unexpected errors
-        return {"error": f"An unexpected error occurred: {str(e)}"}
+    except Exception as e: # Catch any other unexpected errors during analysis
+        print(f"Analysis Error: {e}") # Log the full error to the terminal
+        return {"error": f"An unexpected error occurred during analysis: {str(e)}"}
 
 
 if __name__ == "__main__":
