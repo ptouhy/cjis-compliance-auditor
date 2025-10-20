@@ -659,66 +659,82 @@ Personnel are strictly prohibited from sharing login credentials with any other 
     <script>
         // --- Main analysis function (connects to Python) ---
         function analyzeCompliance() {
-            const policyText = document.getElementById('policyText').value;
-            const policySectionSelect = document.getElementById('policySection');
-            const selectedSection = policySectionSelect.options[policySectionSelect.selectedIndex].value;
-            const analyzeBtn = document.getElementById('analyzeBtn');
-            
-            // Convert the CJIS dropdown value to the key used in compliance_checker.py
-            const sectionMap = {
-                'authenticator': 'authenticator_management',
-                'mediaProtection': 'media_protection',
-                'accessControl': 'access_control',
-                'auditLog': 'audit_and_accountability',
-                'physicalSecurity': 'physical_protection'
-                // Add other mappings here as you expand the checker
-            };
+        const policyText = document.getElementById('policyText').value;
+        const fileInput = document.getElementById('fileInput'); // Get file input
+        const policyFile = fileInput.files[0]; // Get the selected file
+        
+        const policySectionSelect = document.getElementById('policySection');
+        const selectedSection = policySectionSelect.options[policySectionSelect.selectedIndex].value;
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        
+        // Convert the CJIS dropdown value to the key used in compliance_checker.py
+        const sectionMap = {
+            'authenticator': 'authenticator_management',
+            'mediaProtection': 'media_protection',
+            'accessControl': 'access_control',
+            'auditLog': 'audit_and_accountability',
+            'physicalSecurity': 'physical_protection'
+        };
+        const backendSectionKey = sectionMap[selectedSection] || selectedSection;
 
-            const backendSectionKey = sectionMap[selectedSection] || selectedSection;
-
-            if (!policyText.trim()) {
-                alert('Please enter a policy document to analyze.');
-                return;
-            }
-
-            // --- Show loading state ---
-            analyzeBtn.innerHTML = '<span class="loading-spinner"></span>Analyzing...';
-            analyzeBtn.disabled = true;
-            showProcessingStatus(); // Calls the helper function below
-
-            // --- Prepare data and call the backend API ---
-            const formData = new FormData();
-            formData.append('policy_text', policyText);
-            formData.append('section', backendSectionKey);
-
-            fetch('http://127.0.0.1:8000/api/analyze', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // The 'data' object is the JSON checklist from your Python backend
-                console.log("Received data from backend:", data); // Good for debugging
-                
-                // Display the results
-                displayChecklistResults(data); 
-            })
-            .catch(error => {
-                console.error('Error during analysis:', error);
-                alert('An error occurred. Please check the terminal for more details.');
-            })
-            .finally(() => {
-                // --- Reset the button and hide loading status ---
-                analyzeBtn.innerHTML = 'Analyze Compliance';
-                analyzeBtn.disabled = false;
-                hideProcessingStatus(); // Calls the helper function below
-            }); 
+        // --- NEW VALIDATION ---
+        // Check if BOTH text and file are empty
+        if (!policyText.trim() && !policyFile) {
+            alert('Please enter a policy document or upload a file to analyze.');
+            return;
         }
+
+        // --- Show loading state ---
+        analyzeBtn.innerHTML = '<span class="loading-spinner"></span>Analyzing...';
+        analyzeBtn.disabled = true;
+        showProcessingStatus(); // Calls the helper function below
+
+        // --- NEW: Prepare data and call the backend API ---
+        const formData = new FormData();
+        formData.append('section', backendSectionKey); // Add section first
+
+        // --- NEW LOGIC ---
+        // Send the file if it exists. If not, send the text.
+        // Your Python backend is already set up to handle this
+        if (policyFile) {
+            formData.append('file', policyFile);
+        } else if (policyText.trim()) {
+            formData.append('policy_text', policyText);
+        }
+
+        fetch('http://127.0.0.1:8000/api/analyze', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // The 'data' object is the JSON checklist from your Python backend
+            console.log("Received data from backend:", data); // Good for debugging
+
+            // Check if the backend sent an error message
+            if (data.error) {
+                alert('Analysis Error: ' + data.error);
+            } else {
+                // If no error, display results as normal
+                displayChecklistResults(data); 
+            }
+        })
+        .catch(error => {
+            console.error('Error during analysis:', error);
+            alert('An error occurred. Please check the terminal for more details.');
+        })
+        .finally(() => {
+            // --- Reset the button and hide loading status ---
+            analyzeBtn.innerHTML = 'Analyze Compliance';
+            analyzeBtn.disabled = false;
+            hideProcessingStatus(); // This is another existing helper function
+        }); 
+    }
         
         // --- Displays the results from the Python backend ---
         function displayChecklistResults(checklistData) {
