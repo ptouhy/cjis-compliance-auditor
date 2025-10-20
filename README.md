@@ -6,8 +6,8 @@ A full-stack web application that automatically analyzes an agency's security po
 
 ## Features
 
-* **Text & File Analysis:** Accepts policy input via direct text paste or PDF file upload.
-* **Compliance Reporting:** Systematically checks the policy against known CJIS requirements.
+* **Text & File Analysis:** Accepts policy input via direct text paste or file upload (PDF and Microsoft Word `.docx` supported).
+* **Compliance Reporting:** Systematically checks the policy against all 5 major CJIS sections.
 * **Dynamic Results:** Generates a real-time report showing `Compliant`, `Non-Compliant`, and `Missing` items.
 
 ---
@@ -18,6 +18,7 @@ A full-stack web application that automatically analyzes an agency's security po
     * **FastAPI:** For building the web server and API.
     * **Uvicorn:** As the ASGI server to run the application.
     * **PyPDF2:** To extract text from PDF documents.
+    * **python-docx:** To extract text from `.docx` Word documents.
 * **Frontend:**
     * **HTML5:** For page structure.
     * **CSS3:** For all custom styling.
@@ -32,22 +33,26 @@ A full-stack web application that automatically analyzes an agency's security po
     git clone [https://github.com/your-username/cjis-compliance-auditor.git](https://github.com/your-username/cjis-compliance-auditor.git)
     cd cjis-compliance-auditor
     ```
+   
 
 2.  **Create and activate a virtual environment:**
     ```bash
     python3 -m venv venv
     source venv/bin/activate
     ```
+   
 
 3.  **Install the required packages:**
     ```bash
     pip3 install -r requirements.txt
     ```
+   
 
 4.  **Run the server:**
     ```bash
     uvicorn main:app --reload
     ```
+   
 
 5.  **Open the application in your browser:**
     * Go to `http://127.0.0.1:8000`
