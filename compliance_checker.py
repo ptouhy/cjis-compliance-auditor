@@ -3,58 +3,48 @@ from typing import List, Dict, Optional
 from enum import Enum
 #import openai  # For LLM integration when ready
 
-# Defines the possible outcomes of a compliance check
 class ComplianceStatus(Enum):
     COMPLIANT = "compliant"
     NON_COMPLIANT = "non_compliant"
     MISSING = "missing"
     PENDING_REVIEW = "pending_review"
 
-# A data structure (using dataclass for brevity) to hold the details of a single CJIS rule
 @dataclass
 class CJISRequirement:
     """Individual CJIS requirement with exact policy text"""
-    id: str                 # Unique identifier for the rule (e.g., "5.6.3.2.1")
-    section: str            # CJIS section number (e.g., "5.6.3.2")
-    title: str              # Short, human-readable title for the rule
-    requirement_text: str   # The official text of the CJIS requirement
-    critical: bool = True   # Flag indicating if the requirement is critical
-    keywords: List[str] = None # List of keywords used for basic analysis
+    id: str
+    section: str
+    title: str
+    requirement_text: str  # Exact CJIS policy language
+    critical: bool = True
+    keywords: List[str] = None
 
-# A data structure to hold the result of checking one requirement against a policy
 @dataclass
 class ComplianceCheck:
     """Result of checking one requirement against agency policy"""
-    requirement: CJISRequirement # The rule that was checked
-    status: ComplianceStatus     # The outcome (Compliant, Non-Compliant, etc.)
-    confidence: float            # How confident the analysis is (0.0 to 1.0)
-    evidence_text: str           # Snippet from the agency policy used as evidence
-    issues: List[str]            # List of specific problems found
-    suggestions: List[str]       # List of suggestions for fixing the issues
-    auditor_confirmed: bool = False # Flag for auditor review workflow
-    auditor_notes: str = ""         # Notes added by the auditor
+    requirement: CJISRequirement
+    status: ComplianceStatus
+    confidence: float
+    evidence_text: str  # Exact text from agency policy
+    issues: List[str]
+    suggestions: List[str]
+    auditor_confirmed: bool = False
+    auditor_notes: str = ""
 
-# The main class responsible for performing the compliance analysis
 class CJISComplianceChecker:
     """
     Systematic checker that validates agency policies against CJIS requirements.
     Designed for auditor oversight and confirmation workflow.
     """
     
-    # Constructor: Runs when a new CJISComplianceChecker is created
     def __init__(self):
-        # Load all the CJIS rules from the internal method into memory
         self.cjis_requirements = self._load_cjis_requirements()
-        # Placeholder for an LLM client (e.g., OpenAI, Gemini) - not used yet
-        self.llm_client = None
+        self.llm_client = None  # Initialize when ready
         
-    # Internal method to define all the CJIS rules known by this checker
     def _load_cjis_requirements(self) -> Dict[str, List[CJISRequirement]]:
-        """Load all CJIS requirements organized by section key (e.g., 'authenticator_management')."""
-        # Returns a dictionary where keys are section names and values are lists of CJISRequirement objects
+        """Load all CJIS requirements organized by section"""
         return {
             "authenticator_management": [
-                # ... (list of CJISRequirement objects for this section) ...
                 CJISRequirement(
                     id="5.6.3.2.1",
                     section="5.6.3.2",
@@ -62,11 +52,37 @@ class CJISComplianceChecker:
                     requirement_text="Agencies shall define initial authenticator content for authenticators defined by the organization.",
                     keywords=["initial", "authenticator", "content", "define", "organization"]
                 ),
-                # ... (other requirements for authenticator_management) ...
+                CJISRequirement(
+                    id="5.6.3.2.2", 
+                    section="5.6.3.2",
+                    title="Administrative Procedures",
+                    requirement_text="Agencies shall establish administrative procedures for initial authenticator distribution, for lost/compromised/damaged authenticators, and for revoking authenticators.",
+                    keywords=["administrative", "procedures", "distribution", "lost", "compromised", "damaged", "revoking"]
+                ),
+                CJISRequirement(
+                    id="5.6.3.2.3",
+                    section="5.6.3.2", 
+                    title="Change Default Authenticators",
+                    requirement_text="Agencies shall change default authenticators upon information system installation.",
+                    keywords=["change", "default", "authenticators", "installation", "system"]
+                ),
+                CJISRequirement(
+                    id="5.6.3.2.4",
+                    section="5.6.3.2",
+                    title="Periodic Authenticator Changes",
+                    requirement_text="Agencies shall change/refresh authenticators periodically.",
+                    keywords=["change", "refresh", "authenticators", "periodically", "regular"]
+                ),
+                CJISRequirement(
+                    id="5.6.3.2.5",
+                    section="5.6.3.2",
+                    title="User Safeguarding Responsibilities", 
+                    requirement_text="Users shall take reasonable measures to safeguard authenticators including maintaining possession of their individual authenticators, not loaning or sharing authenticators with others, and immediately reporting lost or compromised authenticators.",
+                    keywords=["safeguard", "maintain possession", "not sharing", "not loaning", "report", "lost", "compromised"]
+                )
             ],
 
             "media_protection": [
-                # ... (list of CJISRequirement objects for this section) ...
                 CJISRequirement(
                     id="5.10.1.1",
                     section="5.10.1",
@@ -74,11 +90,17 @@ class CJISComplianceChecker:
                     requirement_text="The information system shall restrict access to digital and non-digital media to authorized individuals.",
                     keywords=["restrict access", "media", "authorized", "individuals"]
                 ),
-                # ... (other requirements for media_protection) ...
+
+                CJISRequirement(
+                    id="5.10.2.1",
+                    section="5.10.2", 
+                    title="Media Sanitization",
+                    requirement_text="The organization shall sanitize information system media, both digital and non-digital, prior to disposal, release out of organizational control, or release for reuse.",
+                    keywords=["sanitize", "media", "disposal", "release", "reuse", "NIST SP 800-88"]
+                )
             ],
-            
+            # --- NEW SECTION ADDED ---
             "access_control": [
-                 # ... (list of CJISRequirement objects for this section) ...
                 CJISRequirement(
                     id="5.2.1",
                     section="5.2",
@@ -86,11 +108,30 @@ class CJISComplianceChecker:
                     requirement_text="Agencies shall enforce the principle of least privilege, allowing only authorized accesses for users (or processes acting on behalf of users) which are necessary to accomplish assigned tasks.",
                     keywords=["least privilege", "authorized access", "need-to-know", "need-to-share", "role-based"]
                 ),
-                # ... (other requirements for access_control) ...
+                CJISRequirement(
+                    id="5.2.2",
+                    section="5.2",
+                    title="Account Management - Disabling Inactive Accounts",
+                    requirement_text="The information system shall automatically disable inactive accounts after a period of 90 days.",
+                    keywords=["disable", "inactive", "accounts", "90 days", "ninety"]
+                ),
+                CJISRequirement(
+                    id="5.2.3",
+                    section="5.2",
+                    title="Account Management - Concurrent Sessions",
+                    requirement_text="The information system shall prevent multiple concurrent active sessions for one user identification unless explicitly authorized by the agency.",
+                    keywords=["concurrent", "sessions", "multiple", "user identification", "prevent"]
+                ),
+                CJISRequirement(
+                    id="5.2.4",
+                    section="5.2",
+                    title="Object-Level Access Control",
+                    requirement_text="Access control mechanisms shall be restricted by object (e.g., data set, volumes, files, records) including the ability to read, write, or delete the objects.",
+                    keywords=["restrict", "object", "files", "records", "read", "write", "delete"]
+                )
             ],
 
             "audit_and_accountability": [
-                 # ... (list of CJISRequirement objects for this section) ...
                 CJISRequirement(
                     id="5.4.1",
                     section="5.4",
@@ -98,96 +139,135 @@ class CJISComplianceChecker:
                     requirement_text="The information system shall generate audit records containing information that establishes what type of event occurred, when the event occurred, where the event occurred, the source of the event, the outcome of the event, and the identity of any user/subject associated with the event.",
                     keywords=["audit records", "generate", "event", "when", "where", "source", "outcome", "identity", "user"]
                 ),
-                # ... (other requirements for audit_and_accountability) ...
+                CJISRequirement(
+                    id="5.4.2",
+                    section="5.4",
+                    title="Audit Log Review",
+                    requirement_text="Agencies shall review/analyze information system audit records at least weekly for indications of inappropriate or unusual activity.",
+                    keywords=["review", "analyze", "audit records", "weekly", "inappropriate", "unusual activity"]
+                ),
+                CJISRequirement(
+                    id="5.4.3",
+                    section="5.4",
+                    title="Audit Log Retention",
+                    requirement_text="Agencies shall retain audit logs for at least one year (365 days).",
+                    keywords=["retain", "audit logs", "one year", "365 days"]
+                )
             ],
 
+            # --- PASTE THIS NEW SECTION IN ---
             "physical_protection": [
-                 # ... (list of CJISRequirement objects for this section) ...
-                 CJISRequirement(
+                CJISRequirement(
                     id="5.9.1",
                     section="5.9",
                     title="Physical Access Control",
                     requirement_text="The agency shall limit physical access to information systems, equipment, and the respective operating environments to authorized individuals.",
                     keywords=["limit", "physical access", "systems", "equipment", "authorized individuals"]
                 ),
-                # ... (other requirements for physical_protection) ...
+                CJISRequirement(
+                    id="5.9.2",
+                    section="5.9",
+                    title="Visitor Control",
+                    requirement_text="The agency shall escort visitors and monitor visitor activity in all physically secure locations.",
+                    keywords=["escort", "visitors", "monitor", "visitor activity", "secure locations"]
+                ),
+                CJISRequirement(
+                    id="5.9.3",
+                    section="5.9",
+                    title="Visitor Access Records",
+                    requirement_text="The agency shall maintain visitor access records to the facility for one (1) year and review them quarterly.",
+                    keywords=["visitor access records", "maintain", "one year", "365 days", "review", "quarterly"]
+                ),
+                CJISRequirement(
+                    id="5.9.4",
+                    section="5.9",
+                    title="Monitoring Physical Access",
+                    requirement_text="The agency shall monitor physical access to the facility where the system resides using physical intrusion alarms and surveillance equipment.",
+                    keywords=["monitor", "physical access", "intrusion alarms", "surveillance", "cameras"]
+                )
             ]
         }
+
+
+        
     
-    # Public method called by main.py to start an analysis for a specific section
     def check_section(self, section_name: str, agency_policy_text: str) -> List[ComplianceCheck]:
         """
-        Check all requirements in a given CJIS section against the provided agency policy text.
+        Check all requirements in a CJIS section against agency policy.
+        Returns list of compliance checks that require auditor review.
         """
-        # Check if the requested section name is valid (exists in our loaded requirements)
         if section_name not in self.cjis_requirements:
             raise ValueError(f"Unknown CJIS section: {section_name}")
             
-        # Get the list of rules for the requested section
         requirements = self.cjis_requirements[section_name]
-        compliance_checks = [] # List to store the results for each rule
+        compliance_checks = []
         
-        # Loop through each rule in the section
         for requirement in requirements:
-            # Analyze this single rule against the policy text
             check = self._analyze_requirement(requirement, agency_policy_text)
-            compliance_checks.append(check) # Add the result to our list
+            compliance_checks.append(check)
             
-        # Return the list of all results for this section
         return compliance_checks
     
-    # Internal method that decides whether to use LLM or keyword analysis
     def _analyze_requirement(self, requirement: CJISRequirement, agency_policy: str) -> ComplianceCheck:
         """
-        Analyze a single requirement against the agency policy.
-        Delegates to either LLM or keyword analysis based on availability.
+        Analyze single requirement against agency policy.
+        Uses LLM for semantic analysis when available, falls back to keyword matching.
         """
-        if self.llm_client: # If an LLM client is configured (currently None)
+        if self.llm_client:
             return self._llm_analysis(requirement, agency_policy)
-        else: # Otherwise, use the basic keyword analysis
+        else:
             return self._keyword_analysis(requirement, agency_policy)
     
-    # Placeholder for future LLM-based analysis
     def _llm_analysis(self, requirement: CJISRequirement, agency_policy: str) -> ComplianceCheck:
-        """LLM-powered semantic analysis (to be implemented later)."""
+        """LLM-powered semantic analysis (implement when ready)"""
         prompt = f"""
-        # ... (LLM prompt defined here) ...
+        CJIS Requirement: {requirement.requirement_text}
+        
+        Agency Policy: {agency_policy}
+        
+        Analyze if the agency policy meets this specific CJIS requirement.
+        
+        Respond with JSON:
+        {{
+            "compliant": true/false,
+            "confidence": 0.0-1.0,
+            "evidence": "exact quote from agency policy that addresses this requirement",
+            "issues": ["specific gaps or problems"],
+            "suggestions": ["specific changes needed"]
+        }}
         """
-        # In the future, API call to LLM would happen here
-        # For now, it just falls back to keyword analysis
-        print("Note: LLM analysis not implemented, falling back to keyword analysis.")
+        
+        # LLM call would go here
+        # response = self.llm_client.chat.completions.create(...)
+        
+        # For now, fallback to keyword analysis
         return self._keyword_analysis(requirement, agency_policy)
     
-    # The current core analysis logic: basic keyword matching
     def _keyword_analysis(self, requirement: CJISRequirement, agency_policy: str) -> ComplianceCheck:
-        """Performs a simple keyword-based analysis."""
-        policy_lower = agency_policy.lower() # Convert policy to lowercase for case-insensitive matching
+        """Keyword-based analysis as fallback"""
+        policy_lower = agency_policy.lower()
         issues = []
         suggestions = []
         evidence_text = ""
         
-        # --- Find sentences relevant to the rule's keywords ---
+        # Find relevant text sections
         relevant_sentences = []
-        sentences = agency_policy.split('.') # Basic sentence splitting
+        sentences = agency_policy.split('.')
+        
         for sentence in sentences:
-            # Check if any of the rule's keywords appear in the sentence
             if any(keyword.lower() in sentence.lower() for keyword in requirement.keywords):
                 relevant_sentences.append(sentence.strip())
         
-        # Use the first couple of relevant sentences as evidence
-        evidence_text = '. '.join(relevant_sentences[:2])
+        evidence_text = '. '.join(relevant_sentences[:2])  # Top 2 relevant sentences
         
-        # --- Determine compliance based on keyword coverage ---
-        # Count how many of the rule's keywords are present in the policy
+        # Determine compliance based on keyword coverage
         keyword_matches = sum(1 for keyword in requirement.keywords 
                             if keyword.lower() in policy_lower)
-        # Calculate a simple coverage percentage
-        coverage = keyword_matches / len(requirement.keywords) if requirement.keywords else 0
+        coverage = keyword_matches / len(requirement.keywords)
         
-        # Determine status based on coverage threshold (simple logic)
         if coverage >= 0.7 and len(relevant_sentences) > 0:
             status = ComplianceStatus.COMPLIANT
-            confidence = min(0.85, coverage) # Cap confidence slightly below 1.0
+            confidence = min(0.85, coverage)
         elif coverage >= 0.3:
             status = ComplianceStatus.NON_COMPLIANT
             confidence = 0.6
@@ -199,7 +279,6 @@ class CJISComplianceChecker:
             issues.append("No evidence found for this requirement")
             suggestions.append(f"Add policy section covering: {requirement.title}")
         
-        # Create and return the ComplianceCheck result object
         return ComplianceCheck(
             requirement=requirement,
             status=status,
@@ -207,79 +286,96 @@ class CJISComplianceChecker:
             evidence_text=evidence_text,
             issues=issues,
             suggestions=suggestions
-            # auditor_confirmed defaults to False
         )
     
-    # Method to format the raw analysis results into a structure the frontend expects
     def generate_audit_checklist(self, compliance_checks: List[ComplianceCheck]) -> Dict:
         """
-        Generate a structured dictionary (checklist) from the compliance results,
-        suitable for sending back as JSON to the frontend.
+        Generate structured checklist for auditor review.
+        Groups findings by status and priority for efficient review.
         """
         checklist = {
-            # Summary statistics
             "summary": {
                 "total_requirements": len(compliance_checks),
                 "compliant": len([c for c in compliance_checks if c.status == ComplianceStatus.COMPLIANT]),
                 "non_compliant": len([c for c in compliance_checks if c.status == ComplianceStatus.NON_COMPLIANT]),
                 "missing": len([c for c in compliance_checks if c.status == ComplianceStatus.MISSING]),
-                "pending_review": len([c for c in compliance_checks if not c.auditor_confirmed]) # All items initially require review
+                "pending_review": len([c for c in compliance_checks if not c.auditor_confirmed])
             },
-            # List of critical issues (non-compliant or missing critical rules)
-            "critical_issues": [c.__dict__ for c in compliance_checks # Convert dataclass to dict for JSON
+            "critical_issues": [c for c in compliance_checks 
                              if c.requirement.critical and c.status != ComplianceStatus.COMPLIANT],
-            # List of all checks needing review (initially all checks)
-            "requires_confirmation": [c.__dict__ for c in compliance_checks if not c.auditor_confirmed], # Convert dataclass to dict
-            # Checks grouped by their specific CJIS subsection (e.g., "5.6.3.2")
+            "requires_confirmation": [c for c in compliance_checks if not c.auditor_confirmed],
             "by_section": {}
         }
         
-        # Populate the by_section grouping
+        # Group by section for systematic review
         for check in compliance_checks:
-            section_id = check.requirement.section # Get the specific section ID (e.g., "5.6.3.2")
-            if section_id not in checklist["by_section"]:
-                checklist["by_section"][section_id] = []
-            # Convert dataclass to dict before appending for JSON compatibility
-            checklist["by_section"][section_id].append(check.__dict__)
+            section = check.requirement.section
+            if section not in checklist["by_section"]:
+                checklist["by_section"][section] = []
+            checklist["by_section"][section].append(check)
         
-        # Convert nested CJISRequirement objects within the lists to dictionaries as well
-        for key in ["critical_issues", "requires_confirmation"]:
-            for item in checklist[key]:
-                item['requirement'] = item['requirement'].__dict__
-        for section_key in checklist["by_section"]:
-            for item in checklist["by_section"][section_key]:
-                 item['requirement'] = item['requirement'].__dict__
-
         return checklist
     
-    # --- Placeholder Methods for Future Features ---
-    
     def confirm_finding(self, check_id: str, auditor_confirmed: bool, notes: str = ""):
-        """(Future) Allow auditor to confirm or override findings."""
-        # This would likely involve updating a database record in a full implementation
+        """Allow auditor to confirm or override LLM findings"""
+        # In full implementation, would update database/state
         pass
     
     def export_final_report(self, compliance_checks: List[ComplianceCheck]) -> Dict:
-        """(Future) Generate a final compliance report after auditor review."""
+        """Generate final compliance report after auditor review"""
         confirmed_checks = [c for c in compliance_checks if c.auditor_confirmed]
-        # ... (logic to format a final report) ...
-        return {} # Placeholder
+        
+        return {
+            "agency": "Agency Name",
+            "cjis_section": "Section Analyzed", 
+            "audit_date": "2025-01-XX",
+            "auditor": "Auditor Name",
+            "total_requirements_checked": len(confirmed_checks),
+            "compliance_summary": {
+                "compliant": len([c for c in confirmed_checks if c.status == ComplianceStatus.COMPLIANT]),
+                "non_compliant": len([c for c in confirmed_checks if c.status == ComplianceStatus.NON_COMPLIANT]),
+                "missing": len([c for c in confirmed_checks if c.status == ComplianceStatus.MISSING])
+            },
+            "findings": confirmed_checks,
+            "recommendations": self._generate_prioritized_recommendations(confirmed_checks)
+        }
     
     def _generate_prioritized_recommendations(self, checks: List[ComplianceCheck]) -> List[Dict]:
-        """(Future) Generate prioritized list of recommendations based on findings."""
+        """Generate prioritized list of recommendations"""
         recommendations = []
-        # ... (logic to prioritize recommendations) ...
-        return recommendations # Placeholder
+        
+        # Critical missing requirements first
+        critical_missing = [c for c in checks 
+                          if c.requirement.critical and c.status == ComplianceStatus.MISSING]
+        
+        for check in critical_missing:
+            recommendations.append({
+                "priority": "HIGH",
+                "requirement": check.requirement.title,
+                "issue": "Requirement completely missing from policy",
+                "action": f"Add policy section addressing: {check.requirement.requirement_text}"
+            })
+        
+        # Non-compliant requirements
+        non_compliant = [c for c in checks if c.status == ComplianceStatus.NON_COMPLIANT]
+        for check in non_compliant:
+            recommendations.append({
+                "priority": "MEDIUM" if check.requirement.critical else "LOW",
+                "requirement": check.requirement.title,
+                "issues": check.issues,
+                "actions": check.suggestions
+            })
+        
+        return recommendations
 
-# --- Example Usage Block ---
-# This code runs only if you execute `python compliance_checker.py` directly
-# It's useful for basic testing of the checker logic itself
+# Usage Example:
 def main():
     checker = CJISComplianceChecker()
     
-    # Define a simple sample policy text for testing
+    # Sample agency policy text
     agency_policy = """
     METRO POLICE DEPARTMENT - AUTHENTICATOR MANAGEMENT POLICY
+    
     Section 4.2: Access Control and Authentication
     All department personnel must use strong passwords containing at least 8 characters.
     Passwords must be changed every 90 days.
@@ -289,33 +385,25 @@ def main():
     Personnel are prohibited from sharing login credentials.
     """
     
-    try:
-        # Run compliance check for a specific section
-        compliance_results = checker.check_section("authenticator_management", agency_policy)
-        
-        # Generate the checklist dictionary
-        audit_checklist = checker.generate_audit_checklist(compliance_results)
-        
-        # Print a simple summary to the console
-        print("=== CJIS COMPLIANCE AUDIT CHECKLIST ===")
-        print(f"Total Requirements: {audit_checklist['summary']['total_requirements']}")
-        print(f"Compliant: {audit_checklist['summary']['compliant']}")
-        print(f"Non-Compliant: {audit_checklist['summary']['non_compliant']}")
-        print(f"Missing: {audit_checklist['summary']['missing']}")
-        
-        print("\n=== REQUIRES AUDITOR CONFIRMATION ===")
-        # Print details for items requiring review
-        for check in audit_checklist["requires_confirmation"]:
-            # Access dictionary keys now since generate_audit_checklist converts them
-            print(f"\n{check['requirement']['title']}") 
-            print(f"Status: {check['status']}") # Status is already a string from Enum value
-            print(f"Evidence: {check['evidence_text']}")
-            print(f"Issues: {check['issues']}")
-            print("[ ] Auditor Confirmed")
-            
-    except ValueError as e:
-        print(f"Error: {e}") # Print section errors if they occur during testing
+    # Run compliance check
+    compliance_results = checker.check_section("authenticator_management", agency_policy)
+    
+    # Generate auditor checklist
+    audit_checklist = checker.generate_audit_checklist(compliance_results)
+    
+    print("=== CJIS COMPLIANCE AUDIT CHECKLIST ===")
+    print(f"Total Requirements: {audit_checklist['summary']['total_requirements']}")
+    print(f"Compliant: {audit_checklist['summary']['compliant']}")
+    print(f"Non-Compliant: {audit_checklist['summary']['non_compliant']}")
+    print(f"Missing: {audit_checklist['summary']['missing']}")
+    
+    print("\n=== REQUIRES AUDITOR CONFIRMATION ===")
+    for check in audit_checklist["requires_confirmation"]:
+        print(f"\n{check.requirement.title}")
+        print(f"Status: {check.status.value}")
+        print(f"Evidence: {check.evidence_text}")
+        print(f"Issues: {check.issues}")
+        print("[ ] Auditor Confirmed")
 
-# Standard Python practice: Call the main() function if this script is run directly
 if __name__ == "__main__":
     main()
